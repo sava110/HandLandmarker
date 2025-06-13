@@ -5,45 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MediaPipe Hand Landmarker (Starter)</title>
 
-  <!-- =====================
-  ここはスターター用テンプレートです。下記コメントに従って
-  授業中にコードを「手で」書き加えてください。
-  ====================== -->
-
-  <!-- (1) ライブラリ読み込み -->
-  <!-- TODO: camera_utils.js を CDN から読み込む -->
+  <!-- ライブラリ読み込み -->
+  <!-- Webカメラを制御するための補助機能ライブラリ-->
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <!-- TODO: drawing_utils.js を CDN から読み込む -->
+  <!-- 手の関節や位置をキャンバスに描画するためのライブラリ -->
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-  <!-- TODO: hands.js         を CDN から読み込む -->
+  <!-- 映像から手の位置をリアルタイムに検出・認識し、ランドマークを返すためのライブラリ -->
    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-
-  <!-- (1) ライブラリ読み込み ここまで -->
 
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- (2) UI パーツ: start / stop -->
-<!-- TODO: 開始・停止ボタンをここに記述 -->
- <button id="start">start</button>
+<!-- UI パーツ: start / stop -->
+<button id="start">start</button>
 <button id="stop">stop</button>
 
-<!-- (3) 入出力エリア -->
-<!-- TODO: video, canvas 要素をここに記述 -->
+<!-- 入出力エリア -->
  <!-- PCカメラのビデオストリーム（入力） -->
 <video id="input" style="display:none;"></video>
 <!-- Landmarksのリアルタイム描画（出力）  -->
 <canvas id="output" width="1280" height="720">
 
-<!-- (4) JavaScript 開始 -->
+<!-- JavaScript 開始 -->
 <script>
 // (4‑1) 変数の定義
 const video = document.getElementById('input');
 const canvas = document.getElementById('output');
 const ctx = canvas.getContext('2d');
 
-// (4‑2) Hands インスタンス生成
+//  Hands インスタンス生成
 // locateFile は CDN パスを返す関数です
 const hands = new Hands({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
@@ -70,22 +61,33 @@ hands.setOptions({
 // (4‑5) 検出結果 onResults コールバック
  
 hands.onResults(results => {
-  // 描画をクリア
+  //描画をクリア
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // カメラ画像を描画
+  //カメラ画像を描画
   ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-  // 以下で手形状の認識結果を重ねて描画
+
   if (results.multiHandLandmarks) {
+    //以下で手形状の認識結果を重ねて描画
     results.multiHandLandmarks.forEach(landmarks => {
-      // 緑色の線でスケルトンを可視化
+      //緑色の線でスケルトンを可視化
       drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 5});
       // 赤色でLandmarksを可視化
       drawLandmarks(ctx, landmarks, {color: '#FF0000', lineWidth: 1});
-      // Landmarksデータのロギング
+
+      // 各ランドマークに番号を描画
+      landmarks.forEach((landmark, index) => {
+        const x = landmark.x * canvas.width;
+        const y = landmark.y * canvas.height;
+        ctx.fillStyle = '#000000';
+        ctx.font = '20px Arial';
+        ctx.fillText(index.toString(), x + 5, y - 5);  //少しずらして描画
+      });
+
       console.log("landmarks", landmarks);
-    })
+    });
   }
 });
+
 
 // (4‑6) start / stop ボタンにイベントを登録
 document.getElementById('start').addEventListener('click', () => camera.start());
