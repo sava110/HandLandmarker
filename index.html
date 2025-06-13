@@ -78,12 +78,15 @@ hands.onResults(results => {
       landmarks.forEach((landmark, index) => {
         const x = landmark.x * canvas.width;
         const y = landmark.y * canvas.height;
+        const z = landmark.z; 
         ctx.fillStyle = '#000000';
         ctx.font = '20px Arial';
-        ctx.fillText(index.toString(), x + 5, y - 5);  //少しずらして描画
-      });
+        //アノテーション番号を少しずらして描画
+        ctx.fillText(index.toString(), x + 5, y - 5);  
 
-      console.log("landmarks", landmarks);
+        console.log(`Landmark ${index}: x=${landmark.x}, y=${landmark.y}, z=${landmark.z}`);
+        
+      });
     });
   }
 });
