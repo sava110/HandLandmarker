@@ -12,8 +12,12 @@
 
   <!-- (1) ライブラリ読み込み -->
   <!-- TODO: camera_utils.js を CDN から読み込む -->
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <!-- TODO: drawing_utils.js を CDN から読み込む -->
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
   <!-- TODO: hands.js         を CDN から読み込む -->
+   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
   <!-- (1) ライブラリ読み込み ここまで -->
 
   <link rel="stylesheet" href="style.css">
@@ -22,51 +26,70 @@
 
 <!-- (2) UI パーツ: start / stop -->
 <!-- TODO: 開始・停止ボタンをここに記述 -->
+ <button id="start">start</button>
+<button id="stop">stop</button>
 
 <!-- (3) 入出力エリア -->
 <!-- TODO: video, canvas 要素をここに記述 -->
+ <!-- PCカメラのビデオストリーム（入力） -->
+<video id="input" style="display:none;"></video>
+<!-- Landmarksのリアルタイム描画（出力）  -->
+<canvas id="output" width="1280" height="720">
 
 <!-- (4) JavaScript 開始 -->
 <script>
-/*
- * (4‑1) 変数の定義
- *   - video
- *   - canvas
- *   - ctx
- */
+// (4‑1) 変数の定義
+const video = document.getElementById('input');
+const canvas = document.getElementById('output');
+const ctx = canvas.getContext('2d');
 
-/* TODO: const video = ... */
+// (4‑2) Hands インスタンス生成
+// locateFile は CDN パスを返す関数です
+const hands = new Hands({
+  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+}); 
 
-/*
- * (4‑2) Hands インスタンス生成
- * locateFile は CDN パスを返す関数です
- */
 
-/* TODO: const hands = new Hands({ ... }); */
+// (4‑3) カメラストリーム取得
+ const camera = new Camera(video, {
+  onFrame: async () => { await hands.send({image: video}); },
+  width: 1280,
+  height: 720
+});
 
-/*
- * (4‑3) カメラストリーム取得
- */
 
-/* TODO: const camera = new Camera(...); */
+// (4‑4) Hands のオプション設定
 
-/*
- * (4‑4) Hands のオプション設定
- */
+hands.setOptions({
+  maxNumHands: 2,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
 
-/* TODO: hands.setOptions({ ... }); */
+// (4‑5) 検出結果 onResults コールバック
+ 
+hands.onResults(results => {
+  // 描画をクリア
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // カメラ画像を描画
+  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+  // 以下で手形状の認識結果を重ねて描画
+  if (results.multiHandLandmarks) {
+    results.multiHandLandmarks.forEach(landmarks => {
+      // 緑色の線でスケルトンを可視化
+      drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 5});
+      // 赤色でLandmarksを可視化
+      drawLandmarks(ctx, landmarks, {color: '#FF0000', lineWidth: 1});
+      // Landmarksデータのロギング
+      console.log("landmarks", landmarks);
+    })
+  }
+});
 
-/*
- * (4‑5) 検出結果 onResults コールバック
- */
-
-/* TODO: hands.onResults(results => { ... }); */
-
-/*
- * (4‑6) start / stop ボタンにイベントを登録
- */
-
-/* TODO: document.getElementById('start')... */
+// (4‑6) start / stop ボタンにイベントを登録
+document.getElementById('start').addEventListener('click', () => camera.start());
+document.getElementById('stop').addEventListener('click', () => camera.stop());
 </script>
 </body>
 </html>
