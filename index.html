@@ -52,9 +52,13 @@ const hands = new Hands({
 // (4‑4) Hands のオプション設定
 
 hands.setOptions({
+  // 検出する手の最大数(2本)
   maxNumHands: 2,
+  // 精度と速度のバランスを指定(0=早いけど精度が低い、1=バランスが良い、2=精度が高いが重い)
   modelComplexity: 1,
+  // 初回検出の信頼度のしきい値(0.0~1.0)。値が高いほど確信がある場合にのみ検出される
   minDetectionConfidence: 0.5,
+  // 一度検出された手を追跡するための信頼度のしきい値。値を高くすれば追跡の安定性が上がるが、ノイズにも弱くなる。
   minTrackingConfidence: 0.5
 });
 
@@ -85,7 +89,7 @@ hands.onResults(results => {
         ctx.fillText(index.toString(), x + 5, y - 5);  
 
         console.log(`Landmark ${index}: x=${landmark.x}, y=${landmark.y}, z=${landmark.z}`);
-        
+
       });
     });
   }
