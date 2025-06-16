@@ -1,6 +1,6 @@
 # MediaPipeを使った手形状認識Webアプリケーション 
 
-## 概要（Overview）
+## 概要
 MediaPipe の Hand Landmarkerを使い。、手の21か所の特徴点（landmarks）をリアルタイムで検出するAIモデルを実装したWebアプリケーションを作成しました。
 
 ## 必要なもの
@@ -26,7 +26,7 @@ MediaPipe の Hand Landmarkerを使い。、手の21か所の特徴点（landmar
   2. 右下の「Go Live」ボタンをクリック
   （または、右クリック→「Open with Live Server」をクリック）
 
-## 使い方(How to Use)
+## 使い方
 このアプリは、WebブラウザからMediaPipeを使った手形状認識を体験できます。
 ※Google Chromeを推奨
 
@@ -39,5 +39,5 @@ MediaPipe の Hand Landmarkerを使い。、手の21か所の特徴点（landmar
 - **手の検出（最大2本の手）**：最大2本の手を認識できます。右手と左手の区別も可能です。
 - **21個の3次元ランドマークの検出**：デベロッパーツールより、landmarksの数と座標（x, y, z）の確認がConsoleに表示されます。
 
-## ライセンス（License）
+## ライセンス
 - このプロジェクトは、MITライセンスのもとで公開しています。
