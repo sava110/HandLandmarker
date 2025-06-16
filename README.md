@@ -9,19 +9,19 @@ MediaPipe の Hand Landmarkerを使い。、手の21か所の特徴点（landmar
 ・Webカメラ
 
 ## セットアップ手順
-1. ### このリポジトリをクローン
+1.  **このリポジトリをクローン**
 `git clone https://github.com/sava110/HandLandmarker.git`
 または、 .zipでダウンロードして展開をしてください。
 
-2. ### VSCodeでフォルダを開く 
+2. **VSCodeでフォルダを開く** 
 VSCodeを起動し、index.htmlがあるフォルダを開きます。
 
-3. ### Live Server拡張機能をインストール
+3. **Live Server拡張機能をインストール**
   1. VSCode左側の拡張機能アイコン（四角いアイコン）をクリック
   2. 検索欄に`Live Server`と入力
   3. 「Live Server」(By Ritwick Dey)を選択し、「install」ボタンをクリック
 
-4. ### サンプルを起動
+4. **サンプルを起動**
   1. index.htmlをエディタで開く
   2. 右下の「Go Live」ボタンをクリック
   　　（または、右クリック→「Open with Live Server」をクリック）
