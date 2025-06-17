@@ -29,7 +29,7 @@
 
 <!-- JavaScript 開始 -->
 <script>
-// (4‑1) 変数の定義
+// 変数の定義
 const video = document.getElementById('input');
 const canvas = document.getElementById('output');
 const ctx = canvas.getContext('2d');
@@ -40,17 +40,14 @@ const hands = new Hands({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 }); 
 
-
-// (4‑3) カメラストリーム取得
+// カメラストリーム取得
  const camera = new Camera(video, {
   onFrame: async () => { await hands.send({image: video}); },
   width: 1280,
   height: 720
 });
 
-
-// (4‑4) Hands のオプション設定
-
+// Hands のオプション設定
 hands.setOptions({
   // 検出する手の最大数(2本)
   maxNumHands: 2,
@@ -62,8 +59,7 @@ hands.setOptions({
   minTrackingConfidence: 0.5
 });
 
-// (4‑5) 検出結果 onResults コールバック
- 
+// 検出結果 onResults コールバック
 hands.onResults(results => {
   //描画をクリア
   ctx.clearRect(0, 0, canvas.width, canvas.height);
