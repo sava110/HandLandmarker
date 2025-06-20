@@ -1,0 +1,235 @@
+<!--
+  ================================================
+  Hand Landmarks → CSV Recorder
+  ------------------------------------------------
+  この HTML は授業 Week 2 で使用する “指文字ランドマーク収集ツール” です。
+  - MediaPipe Hands で片手 21 点のランドマークを取得
+  - Canvas に可視化 (点・骨格・インデックス番号)
+  - 「download」ボタンを押すと、その瞬間の座標を CSV で保存
+    （ファイル名はテキストボックスに入力／自動インクリメントあり）
+  ここでは **プログラム理解を助けるために** 詳細な日本語コメントを挿入しています。
+  HTML / CSS / JavaScript の 3 技術が1ファイルにまとまっているので、
+  迷子にならないようセクション区切りを多用しています。
+  ================================================
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- ビューポート設定：スマホでも見やすいよう縮尺を自動調整 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Hand CSV Recorder</title>
+
+  <!-- ------------------------------------------------------------
+       1. ライブラリ読み込み (CDN)
+       ------------------------------------------------------------
+       MediaPipe 公式 CDN から
+       - camera_utils.js   : カメラのフレーム取り出し
+       - drawing_utils.js  : ランドマークや線を Canvas に描画
+       - hands.js          : 手検出モデル本体
+       をそれぞれ取得します。
+       特定のバージョンを固定したい場合は
+       `...hands@0.10/hands.js` のように @ver を付加して下さい。
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+  <!-- ------------------------------------------------------------
+       2. スタイル (最小限)
+       ------------------------------------------------------------ -->
+  <style>
+    /* 画面全体の基本フォントと背景 */
+    body{
+      font-family:system-ui, sans-serif;
+      text-align:center;
+      background:#f5f7fa;
+      margin:0;
+      padding:2rem;
+    }
+    /* ライブ映像を映す Canvas の外枠 */
+    #output{
+      border:1px solid #aaa;
+      border-radius:8px;
+      max-width:100%;
+      height:auto;
+    }
+    /* 共通ボタンスタイル */
+    button{
+      margin:0.25rem 0.5rem;
+      padding:0.45rem 1.2rem;
+      font-size:1rem;
+      border:0;
+      background:#3b82f6;      /* Tailwind の blue-600 相当 */
+      color:#fff;
+      border-radius:4px;
+      cursor:pointer;
+    }
+    /* 非活性ボタンはグレーアウト */
+    button:disabled{background:#9ca3af;}
+
+    /* ファイル名入力フォームを目立たせる */
+    input[type=text]{
+      padding:0.3rem;
+      font-size:1rem;
+      text-align:center;
+      width:6rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- ------------------------------------------------------------
+       3. 画面レイアウト
+       ------------------------------------------------------------ -->
+  <h1>Hand Landmarks → CSV Recorder</h1>
+
+  <p>
+    カメラを許可し、指文字を見せながら
+    <kbd>download</kbd> を押すとその瞬間の 21 個ランドマークを
+    <code>.csv</code> で保存します。
+  </p>
+
+  <!-- 操作ボタン：計測開始 / 停止 -->
+  <button id="start">Start</button>
+  <button id="stop" disabled>Stop</button><br><br>
+
+  <!-- ファイル名入力 (例: 1-01) & ダウンロード -->
+  file name (d-dd):
+  <input type="text" id="fileName" value="1-01" maxlength="5">
+  <button id="download" disabled>download</button><br><br>
+
+  <!-- 受け取った映像は video 要素で非表示 → Canvas に描画 -->
+  <video id="input" style="display:none;"></video>
+  <canvas id="output" width="640" height="480"></canvas>
+
+  <!-- ------------------------------------------------------------
+       4. メインスクリプト
+       ------------------------------------------------------------ -->
+  <script>
+    /* ==============================
+       4‑1. DOM 要素を取得
+       ============================== */
+    const video   = document.getElementById('input');     // カメラ映像 (hidden)
+    const canvas  = document.getElementById('output');    // 可視化用 Canvas
+    const ctx     = canvas.getContext('2d');              // 2D 描画コンテキスト
+
+    // 操作ボタン
+    const btnStart = document.getElementById('start');
+    const btnStop  = document.getElementById('stop');
+    const btnDL    = document.getElementById('download');
+
+    // ファイル名入力ボックス
+    const fileNameBox = document.getElementById('fileName');
+
+    /* ==============================
+       4‑2. MediaPipe Hands 初期化
+       ============================== */
+    const hands = new Hands({
+      // hands.js など追加ファイルのURLを指定するコールバック
+      locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      // ☆ 今回は単手のみ
+      maxNumHands: 1,
+      modelComplexity: 1,          // 0=Lite, 1=フル精度
+      minDetectionConfidence: 0.5, // 検出しきい値
+      minTrackingConfidence: 0.5   // 追跡しきい値
+    });
+
+    /* ==============================
+       4‑3. カメラセットアップ
+       ============================== */
+    const camera = new Camera(video, {
+      // 受け取ったフレームごとに Hands へ送信
+      onFrame: async () => { await hands.send({image: video}); },
+      width: 640,
+      height: 480
+    });
+
+    /* ==============================
+       4‑4. 録画フラグ & UI
+       ============================== */
+    let recording = false;               // true のとき 1 回だけ CSV 保存
+    btnDL.addEventListener('click', () => recording = true);
+
+    /*  start / stop ボタンの動作  */
+    btnStart.addEventListener('click', () => {
+      camera.start();                    // カメラ開始
+      btnStart.disabled = true;
+      btnStop.disabled  = false;
+      btnDL.disabled    = false;
+    });
+    btnStop.addEventListener('click', () => {
+      camera.stop();                     // カメラ停止
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      btnStart.disabled = false;
+      btnStop.disabled  = true;
+      btnDL.disabled    = true;
+    });
+
+    /* ==============================
+       4‑5. 推論結果のハンドリング
+       ============================== */
+    hands.onResults(results => {
+      /* --- 1) 背景 (カメラ画像) をキャンバスに描画 --- */
+      ctx.save();                                        // ← 描画状態を退避
+      ctx.clearRect(0,0,canvas.width,canvas.height);     // 前フレームを消去
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+      /* --- 2) ランドマークが検出された場合のみ処理--- */
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length){
+        const lmArr = results.multiHandLandmarks[0];     // 今回は片手のみ
+
+        /* 2‑A. 線 (骨格) と点 を描画 */
+        drawConnectors(ctx, lmArr, HAND_CONNECTIONS, {color:'#22c55e', lineWidth:4});
+        drawLandmarks(ctx, lmArr, {color:'#ef4444', radius:3});
+
+        /* 2‑B. インデックス番号を各点の右下に描画 */
+        ctx.fillStyle = '#2563eb';
+        ctx.font = '12px Arial';
+        lmArr.forEach((pt, idx) => {
+          ctx.fillText(idx, pt.x * canvas.width + 4, pt.y * canvas.height + 4);
+        });
+
+        /* 2‑C. ---- CSV 保存（録画フラグが立っているとき一回だけ） ---- */
+        if (recording){
+          // ① ファイル名を取得 (例 "1-01")
+          const fname = fileNameBox.value.trim();
+
+          // ② CSV 文字列を組み立て (data URI スキーム)
+          let csv = "data:text/csv;charset=utf-8,index,x,y,z\n" +
+                    lmArr.map((pt,i)=>`${i},${pt.x.toFixed(6)},${pt.y.toFixed(6)},${pt.z.toFixed(6)}`).join("\n");
+
+          // ③ 擬似リンク (<a download>) で保存
+          const a = document.createElement('a');
+          a.href = encodeURI(csv);
+          a.download = fname + ".csv";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+          // ④ === 自動カウントアップ機能を実装せよ (課題) ==================
+          //    ここを完成させると "1-01" → "1-02" → ... と自動更新されます
+          // ------------------------------------------------------------------
+          
+          const [d, n] = fname.split("-");        // d = "1", n = "01"
+          const next = d + "-" + String(Number(n) + 1).padStart(2, "0");
+          fileNameBox.value = next;
+          
+          // ------------------------------------------------------------------
+          // 【チェックポイント】
+          //  - 文字列操作が苦手な人は console.log(next) で中身を確認
+          //  - 全角スペースや全角マイナスに注意（SyntaxError の原因）
+
+          // ⑤ フラグを必ず false に戻す（無限保存を防止）
+          recording = false;
+        } // ← if(recording) ここまで
+      }   // ← if(ランドマーク検出) ここまで
+
+      ctx.restore();                                     // 描画状態を復元
+    }); // ← hands.onResults コールバック ここまで
+  </script>
+</body>
+</html>
