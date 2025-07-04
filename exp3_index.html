@@ -81,57 +81,27 @@ hands.onResults(res => {
   const lmRaw = res.multiHandLandmarks[0];
   const lm    = lmRaw.map(p => [p.x, p.y]);
 
-
-  /*
-   * =================================================================
-   * ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-   * 【課題】ここから下のデータ前処理を実装しよう！
-   * Pythonのノートブック(exp3_compare.ipynb)の `create_normalized_features` 関数を参考にしてください。
-   * ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-   */
-
   /* ---------- 2. 手首を原点に移動（位置の正規化）---------- */
   // 目的: 手が画面上のどこにあっても同じ特徴が得られるようにするため
   // Pythonコード: lm -= wrist
   const wrist = [...lm[0]]; // 重要なコピー処理は予め記述しておきます
+  const lmShifted = lm.map(([x, y]) => [x - wrist[0], y - wrist[1]]);
 
-  for(let i = 0; i < lm.length; i++){
-    // lm[i] の x座標(0番目) と y座標(1番目) から、手首(wrist)の座標を引く
-      lm[i][0] = lm[i][0] - wrist[0];
-      lm[i][1] = lm[i][1] - wrist[1];
-  }
 
   /* ---------- 3. スケール正規化（大きさの正規化）---------- */
   // 目的: 手の大きさ（カメラとの距離）が違っても同じ特徴が得られるようにするため
   // Pythonコード: norm = np.linalg.norm(lm, axis=1).max(); lm /= norm
 
-  // ステップA: 各点と原点(手首)との距離を計算する
-  let distances = [];
-  for(let i = 0; i < lm.length; i++){
-    const point = lm[i];
-    // pointのx座標とy座標から、原点(0,0)との距離を計算して、distances配列に追加する
-      const d = Math.hypot(point[0], point[1]);// ヒント: 距離は Math.hypot(x, y) で計算できます
-      distances.push(d);//       distances.push(計算した距離);
-  }
-  
-  // ステップB: 距離の最大値を見つける（ここは完成形で提供）
+  // 各点と原点(手首)との距離を計算する
+
+  const distances = lmShifted.map(([x, y]) => Math.hypot(x, y));
+
+  // 距離の最大値を見つけ、全ての座標を、距離の最大値(norm)で割る
   const norm = Math.max(...distances) || 1; // 距離が0の時のエラーを防ぐため || 1 を付けます
-
-  // ステップC: 全ての座標を、距離の最大値(norm)で割る
-  for(let i = 0; i < lm.length; i++){
-    // TODO-3: lm[i] の x座標と y座標を、それぞれ norm で割る
-      lm[i][0] = lm[i][0] / norm;
-      lm[i][1] = lm[i][1] / norm;
-  }
-
-  /* * ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-   * 実装はここまで！
-   * ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-   */
-
+  const lmNormalized = lmShifted.map(([x, y]) => [x / norm, y / norm]);
 
   /* ---------- 4. ベクトル化、標準化、予測 (ここは完成形で提供) ---------- */
-  const vec = lm.flat();
+  const vec = lmNormalized.flat();
   const stdVec = vec.map((v,i) => (v - scMean[i]) / scScale[i]);
   const [pred, prob] = predict(stdVec);
   probDiv.textContent = `数字: ${pred}  (確信度 ${prob.toFixed(2)})`;
