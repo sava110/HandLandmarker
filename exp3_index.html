@@ -78,8 +78,16 @@ hands.onResults(res => {
   if (!modelLoaded || !res.multiHandLandmarks?.length) { probDiv.textContent = '–'; return; }
 
   /* ---------- 1. 21点ランドマーク取得 (ここは完成形で提供) ---------- */
-  const lmRaw = res.multiHandLandmarks[0];
-  const lm    = lmRaw.map(p => [p.x, p.y]);
+// 1. 検出された手の情報を取得
+const lmRaw = res.multiHandLandmarks[0];
+const handType = res.multiHandedness?.[0]?.label; // 'Left' or 'Right'
+
+// 2. 必要に応じて右手の x 座標を反転
+const lm = lmRaw.map(p => {
+  const x = (handType === 'Right') ? 1 - p.x : p.x;
+  return [x, p.y];
+});
+
 
   /* ---------- 2. 手首を原点に移動（位置の正規化）---------- */
   // 目的: 手が画面上のどこにあっても同じ特徴が得られるようにするため
